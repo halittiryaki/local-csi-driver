@@ -1,0 +1,10 @@
+{{- if .Values.storageClass.create -}}
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: {{ default .Release.Name .Values.storageClass.name }}
+provisioner: local.csi.scylladb.com
+volumeBindingMode: {{ .Values.storageClass.volumeBindingMode }}
+parameters:
+  csi.storage.k8s.io/fstype: {{ .Values.storageClass.fstype }}
+{{- end -}}

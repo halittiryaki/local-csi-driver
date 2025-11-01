@@ -1,0 +1,132 @@
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: {{ include "local-csi-driver.fullname" . }}
+  namespace: {{ include "local-csi-driver.namespace" . }}
+  labels: {{ include "local-csi-driver.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels: {{ include "local-csi-driver.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{ include "local-csi-driver.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ template "local-csi-driver.serviceAccountName" . }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{ toYaml . | indent 8 }}
+      {{- end }}
+      {{ include "local-csi-driver.diskProvisionerInit" . | indent 6 }}
+      containers:
+      - name: local-csi-driver
+        image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        args:
+        - --listen=/csi/csi.sock
+        - --node-name=$(NODE_NAME)
+        - --volumes-dir={{  .Values.volumesDir }}
+        - --v=2
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: kubelet-dir
+          mountPath: {{ default "/var/lib/kubelet" .Values.kubeletDir }}
+          mountPropagation: "Bidirectional"
+        - name: plugin-dir
+          mountPath: /csi
+        - name: volumes-dir
+          mountPath: {{ .Values.volumesDir }}
+        ports:
+        - name: healthz
+          containerPort: 9809
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: healthz
+          initialDelaySeconds: 10
+          timeoutSeconds: 3
+          periodSeconds: 2
+          failureThreshold: 5
+      - name: csi-driver-registrar
+        image: {{ .Values.csiRegistrar.image }}
+        imagePullPolicy: {{ .Values.csiRegistrar.pullPolicy }}
+        args:
+        - --csi-address=/csi/csi.sock
+        - --kubelet-registration-path={{ .Values.kubeletDir }}/plugins/local.csi.scylladb.com/csi.sock
+        volumeMounts:
+        - name: plugin-dir
+          mountPath: /csi
+        - name: registration-dir
+          mountPath: /registration
+      - name: liveness-probe
+        image: {{ .Values.livenessProbe.image }}
+        imagePullPolicy: {{ .Values.livenessProbe.pullPolicy }}
+        args:
+        - --csi-address=/csi/csi.sock
+        - --health-port=9809
+        - --v=2
+        volumeMounts:
+        - name: plugin-dir
+          mountPath: /csi
+      - name: csi-provisioner
+        image: {{ .Values.csiProvisioner.image }}
+        imagePullPolicy: {{ .Values.csiProvisioner.pullPolicy }}
+        args:
+        - --csi-address=/csi/csi.sock
+        - --v=2
+        - --node-deployment
+        - --feature-gates=Topology=true
+        - --immediate-topology=false
+        - --enable-capacity
+        - --capacity-ownerref-level=0
+        - --capacity-poll-interval=30s
+        - --default-fstype=xfs
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        volumeMounts:
+        - name: plugin-dir
+          mountPath: /csi
+      volumes:
+      - name: kubelet-dir
+        hostPath:
+          path: {{ .Values.kubeletDir }}
+          type: Directory
+      - name: plugin-dir
+        hostPath:
+          path: {{ .Values.kubeletDir }}/plugins/local.csi.scylladb.com/
+          type: DirectoryOrCreate
+      - name: registration-dir
+        hostPath:
+          path: {{ .Values.kubeletDir }}/plugins_registry/
+          type: Directory
+      - name: volumes-dir
+        hostPath:
+          path: {{ .Values.volumesDir }}
+          type: DirectoryOrCreate
+      {{- if .Values.diskProvisioner.enabled }}
+      - name: hostfs
+        hostPath:
+          path: /
+          type: DirectoryOrCreate
+      {{- end }}

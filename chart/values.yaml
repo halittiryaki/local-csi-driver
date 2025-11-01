@@ -1,0 +1,44 @@
+image:
+  repository: docker.io/scylladb/local-csi-driver
+  tag: ""
+  pullPolicy: IfNotPresent
+
+csiRegistrar:
+  image: registry.k8s.io/sig-storage/csi-node-driver-registrar@sha256:fdff3ee285341bc58033b6b2458a5d45fd90ec6922a8ba6ebdd49b0c41e2cd34
+  pullPolicy: IfNotPresent
+
+livenessProbe:
+  image: registry.k8s.io/sig-storage/livenessprobe@sha256:cacee2b5c36dd59d4c7e8469c05c9e4ef53ecb2df9025fa8c10cdaf61bce62f0
+  pullPolicy: IfNotPresent
+
+csiProvisioner:
+  image: registry.k8s.io/sig-storage/csi-provisioner@sha256:ee3b525d5b89db99da3b8eb521d9cd90cb6e9ef0fbb651e98bb37be78d36b5b8
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: ""
+  automountServiceAccountToken: true
+
+rbac:
+  create: true
+
+nodeSelector: {}
+
+tolerations: []
+
+kubeletDir: /var/lib/kubelet
+volumesDir: /mnt/persistent-volumes
+
+storageClass:
+  create: true
+  name:
+  fstype: xfs
+  volumeBindingMode: WaitForFirstConsumer
+
+diskProvisioner:
+  enabled: false
+  image: docker.io/scylladb/local-csi-driver:latest
+  imagePullPolicy: IfNotPresent
+  volumeImageDir: /var/persistent-volumes
+  sizeGB: 10

@@ -1,0 +1,13 @@
+apiVersion: v2
+type: application
+name: local-csi-driver
+description: Helm chart for scylladb local-csi-driver
+version: 0.1.0
+appVersion: "0.6.0-alpha.1"
+kubeVersion: ">=1.25.0-0"
+home: https://github.com/halittiryaki/local-csi-driver
+sources:
+  - https://github.com/halittiryaki/local-csi-driver.git
+keywords:
+  - kubernetes
+  - csi

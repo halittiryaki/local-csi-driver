@@ -1,0 +1,37 @@
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Helm / charts
+*.tgz
+charts/**/*.tgz
+charts/**/charts/
+.helmignore
+
+# Build artifacts
+dist/
+build/
+bin/
+vendor/
+
+# Logs and temporary files
+*.log
+*.out
+*.tmp
+coverage.out
+
+# Secrets and environment files
+.env
+.env.local
+secrets.yaml
+secrets/
+
+# Kubernetes / local files
+.kube/
+kubeconfig

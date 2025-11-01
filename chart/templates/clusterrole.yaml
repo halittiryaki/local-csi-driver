@@ -1,0 +1,14 @@
+{{- if .Values.rbac.create -}}
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ include "local-csi-driver.fullname" . }}
+subjects:
+- kind: ServiceAccount
+  name: {{ template "local-csi-driver.serviceAccountName" . }}
+  namespace: {{ include "local-csi-driver.namespace" . }}
+roleRef:
+  kind: ClusterRole
+  name: {{ include "local-csi-driver.fullname" . }}
+  apiGroup: rbac.authorization.k8s.io
+{{- end -}}
